@@ -1,11 +1,14 @@
 #include <Firebase_Arduino_WiFiNINA.h>
 
-#define FIREBASE_HOST "https://myfirstproject-fa65c-default-rtdb.europe-west1.firebasedatabase.app/"
-#define FIREBASE_AUTH "lQL8ehEa4s5sFAzNqaFI1VIE8OfwOm2oU9fGIoiF"
+#define FIREBASE_HOST "thirdproject-8258e-default-rtdb.firebaseio.com"
+#define FIREBASE_AUTH "dN5PdgEWteAB6EM1c0W2ZhR3Buqkfe5Z4G9eHASK"
 FirebaseData firebaseData;
 
-#define WIFI_SSID "Telekom-738176"
+/*#define WIFI_SSID "Telekom-738176"
 #define WIFI_PASSWORD "drt23523b2dcddcp"
+*/
+#define WIFI_SSID "redmi"
+#define WIFI_PASSWORD "pivojezivot"
 
 const int belt = 13;
 const int red_led = 12;
@@ -28,11 +31,10 @@ int frequencyBLUE = 0;
 
 float duration1, duration2, distance1, distance2;
 String color = "";
-String jsonfile;
 
 void setup() {
   Serial.begin(9600);
-  
+
   Serial.print("Attempting to connect to WiFi...");
   Serial.println();
   int wifi_status = WL_IDLE_STATUS;
@@ -167,9 +169,9 @@ void loop() {
     color = "green";  
 
     }
-    jsonfile = "{\"" + String(color) + "\":true}";
+    String jsonData = "{\"color\":\"" + String(color) + "\"}";
 
-    if (Firebase.pushJSON(firebaseData, "/Colors", jsonfile)) {
+    if (Firebase.pushJSON(firebaseData, "/colors", jsonData)) {
     Serial.println(firebaseData.dataPath() + " = "+ firebaseData.pushName());
     } else {
     Serial.println(firebaseData.errorReason());
