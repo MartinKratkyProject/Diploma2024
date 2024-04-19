@@ -2,6 +2,10 @@
 #include <NTPClient.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <Servo.h>
+
+const int servoPin = 1;
+Servo servo360;
 
 #define FIREBASE_HOST "myfirstproject-fa65c-default-rtdb.europe-west1.firebasedatabase.app"
 #define FIREBASE_AUTH "lQL8ehEa4s5sFAzNqaFI1VIE8OfwOm2oU9fGIoiF"
@@ -9,34 +13,21 @@ FirebaseData firebaseData;
 
 #define WIFI_SSID "Telekom-738176"
 #define WIFI_PASSWORD "drt23523b2dcddcp"
-/*
-#define WIFI_SSID "redmi"
-#define WIFI_PASSWORD "pivojezivot"
-*/
 
-const int belt = 13;
-const int red_led = 12;
-const int green_led = 11;
-const int blue_led = 10;
+const int trigPin = 8;
+const int echoPin = 9;
 
-int belt_ide = 0;
-
-const int trig1 = 9;
-const int echo1 = 8;
-
-const int trig2 = 6;
-const int echo2 = 7;
-
-const int sensor = 5;
+const int sensor = 3;
+const int servoPIN = 2;
+Servo myservo;
 
 int frequencyRED = 0;
 int frequencyGREEN = 0;
 int frequencyBLUE = 0;
 
-float duration1, duration2, distance1, distance2;
+float duration, distance;
 String color = "";
 
-// Define NTP client and server settings
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
@@ -57,15 +48,8 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH, WIFI_SSID, WIFI_PASSWORD);
   Firebase.reconnectWiFi(true);
 
-  pinMode(belt, OUTPUT);
-  pinMode(red_led, OUTPUT);
-  pinMode(green_led, OUTPUT);
-  pinMode(blue_led, OUTPUT);
-
-  pinMode(trig1, OUTPUT);
-  pinMode(echo1, INPUT);
-  pinMode(trig2, OUTPUT);
-  pinMode(echo2, INPUT);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
 
   pinMode(A0, OUTPUT);
   pinMode(A1, OUTPUT);
@@ -73,54 +57,32 @@ void setup() {
   pinMode(A3, OUTPUT);
 
   pinMode(sensor, INPUT);
+  myservo.attach(servoPIN);
+  myservo.write(90);
 
   digitalWrite(A0, HIGH);
   digitalWrite(A1, LOW);
+  servo360.attach(11);
+  servo360.write(90);
 
-  digitalWrite(trig1, HIGH);
-  digitalWrite(trig2, HIGH);
-
-  // Initialize NTP client
   timeClient.begin();
 }
 
 void loop() {
-  digitalWrite(trig1, LOW);
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  digitalWrite(trig1, HIGH);
+  digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trig1, LOW);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration*.0343)/2;
+  Serial.print("Distance: ");
+  Serial.println(distance);
+  delay(300);
 
-  duration1 = pulseIn(echo1, HIGH);
-  distance1 = (duration1 * 0.0343) / 2;
-  delay(100);
-  if (distance1 < 10) {
-    belt_ide = 1;
-    Serial.print("distance1 = ");
-    Serial.println(distance1);
-  }
-  if (belt_ide == 1) {
-    digitalWrite(belt, HIGH);
-    Serial.println("idem...");
-  }
-
-  digitalWrite(trig2, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trig2, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trig2, LOW);
-  duration2 = pulseIn(echo2, HIGH);
-  distance2 = (duration2 * 0.0343) / 2;
-  delay(100);
-
-  Serial.println(distance1, distance2);
-  if (distance2 < 10) {
-    Serial.print("distance2 = ");
-    Serial.println(distance2);
-    delay(2000);
-    belt_ide = 0;
-    digitalWrite(belt, LOW);
-    Serial.println("stojim...");
+  if (distance < 10 & distance > 3) {
+    delay(1500);
+    servo360.write(90);
 
     //red color
     digitalWrite(A2, LOW);
@@ -152,35 +114,32 @@ void loop() {
     Serial.println("  ");
     delay(100);
 
-    if (frequencyBLUE > frequencyRED & frequencyBLUE > frequencyGREEN) {
-      //modra high
-      digitalWrite(red_led, LOW);
-      digitalWrite(green_led, LOW);
-      digitalWrite(blue_led, HIGH);
-      color = "blue";
-
-    }
-    if (frequencyBLUE < frequencyRED & frequencyRED > frequencyGREEN) {
-      //red high
-      digitalWrite(red_led, HIGH);
-      digitalWrite(green_led, LOW);
-      digitalWrite(blue_led, LOW);
-      color = "red";
-
-    }
-    if (frequencyGREEN > frequencyRED & frequencyBLUE < frequencyGREEN) {
-      //zelena high
-      digitalWrite(red_led, LOW);
-      digitalWrite(green_led, HIGH);
-      digitalWrite(blue_led, LOW);
-      color = "green";
-
+    if (frequencyBLUE > 0 && frequencyGREEN > 0 && frequencyRED > 0) {
+      //biela high
+      myservo.write(180); 
+      color = "white";
+    } else {
+      if (frequencyBLUE > frequencyRED && frequencyBLUE > frequencyGREEN) {
+        //modra high
+        myservo.write(0); 
+        color = "blue";
+      }
+      if (frequencyBLUE < frequencyRED && frequencyRED > frequencyGREEN) {
+        //red high
+        myservo.write(120); 
+        color = "red";
+      }
+      if (frequencyGREEN > frequencyRED && frequencyBLUE < frequencyGREEN) {
+        //zelena high
+        myservo.write(60); 
+        color = "green";
+      }
     }
 
     timeClient.update();
     unsigned long epochTime = timeClient.getEpochTime();
 
-    unsigned long epochDay = epochTime / 86400; // 86400 seconds in a day
+    unsigned long epochDay = epochTime / 86400;
     int year = 1970;
     int month, day, hour, minute, second;
     while (epochDay >= (365 + ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)))) {
@@ -193,7 +152,7 @@ void loop() {
     }
 
     day = epochDay + 1;
-    hour = ((epochTime % 86400) / 3600)+1;
+    hour = ((epochTime % 86400) / 3600) + 1;
     minute = (epochTime % 3600) / 60;
     second = epochTime % 60;
 
@@ -201,15 +160,16 @@ void loop() {
 
     String jsonData = "{\"color\":\"" + String(color) + "\", \"timestamp\":\"" + timestamp + "\"}";
 
-    if (Firebase.pushJSON(firebaseData, "/colors", jsonData)) {
+    if (Firebase.pushJSON(firebaseData, "/colors", jsonData)) { 
       Serial.println(firebaseData.dataPath() + " = " + firebaseData.pushName());
     } else {
       Serial.println(firebaseData.errorReason());
     }
 
     Serial.println(color + " " + timestamp);
-    belt_ide = 1;
-    digitalWrite(belt, HIGH);
-    Serial.println("zase idem...");
+    servo360.write(80);
+    delay(2000);
+  } else {
+    servo360.write(80);
   }
 }
